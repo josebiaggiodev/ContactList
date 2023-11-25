@@ -16,6 +16,7 @@ import br.edu.scl.ifsp.sdm.contactlist.R
 import br.edu.scl.ifsp.sdm.contactlist.adapter.ContactAdapter
 import br.edu.scl.ifsp.sdm.contactlist.databinding.ActivityMainBinding
 import br.edu.scl.ifsp.sdm.contactlist.model.Constant.EXTRA_CONTACT
+import br.edu.scl.ifsp.sdm.contactlist.model.Constant.EXTRA_VIEW_CONTACT
 import br.edu.scl.ifsp.sdm.contactlist.model.Contact
 
 class MainActivity : AppCompatActivity() {
@@ -43,11 +44,12 @@ class MainActivity : AppCompatActivity() {
         carl = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == RESULT_OK) {
                 val contact = result.data?.getParcelableExtra<Contact>(EXTRA_CONTACT)
-                contact?.also {
-                    if(!contactList.any { it.id == contact.id }) {
-                        //Editar
+                contact?.also { newOrEditedContact ->
+                    if(!contactList.any { it.id == newOrEditedContact.id }) {
+                        val position = contactList.indexOfFirst { it.id == newOrEditedContact.id }
+                        contactList[position] = newOrEditedContact
                     } else {
-                        contactList.add(contact)
+                        contactList.add(newOrEditedContact)
                     }
                     contactAdapter.notifyDataSetChanged()
                 }
@@ -58,6 +60,16 @@ class MainActivity : AppCompatActivity() {
 
         amb.contactsLv.adapter = contactAdapter
         registerForContextMenu(amb.contactsLv)
+
+        amb.contactsLv.setOnItemClickListener() { _, _, position, _ ->
+            val contact = contactList[position]
+            val viewContactIntent = Intent(this, ContactActivity::class.java)
+            viewContactIntent.putExtra(EXTRA_CONTACT, contact)
+            startActivity(Intent(this, ContactActivity::class.java).apply {
+                putExtra(EXTRA_CONTACT, contactList[position])
+                putExtra(EXTRA_VIEW_CONTACT, true)
+            })
+        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -93,6 +105,9 @@ class MainActivity : AppCompatActivity() {
                 true
             }
             R.id.addContactMi -> {
+                carl.launch(Intent(this, ContactActivity::class.java).apply {
+                    putExtra(EXTRA_CONTACT, contactList[position])
+                })
                 true
             }
             else -> { false }
