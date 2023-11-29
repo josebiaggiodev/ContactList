@@ -28,7 +28,6 @@ class ContactAdapter(context: Context, private val contactList: MutableList<Cont
 
             val tileContactHolder = TileContactHolder(tcb.nameTv, tcb.emailTv)
             contactTileView.tag = tileContactHolder
-
         }
         val holder = contactTileView.tag as TileContactHolder
         holder.nameTv.text = contact.name

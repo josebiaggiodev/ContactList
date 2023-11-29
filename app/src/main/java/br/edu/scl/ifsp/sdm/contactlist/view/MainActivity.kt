@@ -21,7 +21,7 @@ import br.edu.scl.ifsp.sdm.contactlist.model.Constant.EXTRA_CONTACT
 import br.edu.scl.ifsp.sdm.contactlist.model.Constant.EXTRA_VIEW_CONTACT
 import br.edu.scl.ifsp.sdm.contactlist.model.Contact
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), OnContactClickListener {
     private val amb: ActivityMainBinding by lazy {
         ActivityMainBinding.inflate(layoutInflater)
     }
@@ -31,7 +31,7 @@ class MainActivity : AppCompatActivity() {
 
     // Adapter
     private val contactAdapter: ContactRvAdapter by lazy {
-        ContactRvAdapter(contactList)
+        ContactRvAdapter(contactList, this)
     }
 
     private lateinit var carl: ActivityResultLauncher<Intent>
@@ -47,13 +47,14 @@ class MainActivity : AppCompatActivity() {
             if (result.resultCode == RESULT_OK) {
                 val contact = result.data?.getParcelableExtra<Contact>(EXTRA_CONTACT)
                 contact?.also { newOrEditedContact ->
-                    if(!contactList.any { it.id == newOrEditedContact.id }) {
+                    if(contactList.any { it.id == newOrEditedContact.id }) {
                         val position = contactList.indexOfFirst { it.id == newOrEditedContact.id }
                         contactList[position] = newOrEditedContact
+                        contactAdapter.notifyItemChanged(position)
                     } else {
                         contactList.add(newOrEditedContact)
+                        contactAdapter.notifyItemInserted(contactList.lastIndex)
                     }
-                    contactAdapter.notifyDataSetChanged()
                 }
             }
         }
@@ -62,16 +63,6 @@ class MainActivity : AppCompatActivity() {
 
         amb.contactsRv.adapter = contactAdapter
         amb.contactsRv.layoutManager = LinearLayoutManager(this)
-
-        //amb.contactsLv.setOnItemClickListener() { _, _, position, _ ->
-        //    val contact = contactList[position]
-        //    val viewContactIntent = Intent(this, ContactActivity::class.java)
-        //    viewContactIntent.putExtra(EXTRA_CONTACT, contact)
-        //    startActivity(Intent(this, ContactActivity::class.java).apply {
-        //        putExtra(EXTRA_CONTACT, contactList[position])
-        //        putExtra(EXTRA_VIEW_CONTACT, true)
-        //    })
-        //}
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -89,35 +80,29 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onCreateContextMenu(
-        menu: ContextMenu?,
-        v: View?,
-        menuInfo: ContextMenu.ContextMenuInfo?
-    ) {
-        menuInflater.inflate(R.menu.context_menu_main, menu)
+    override fun onRemoveContactMenuItemClick(position: Int) {
+        contactList.removeAt(position)
+        contactAdapter.notifyItemRemoved(position)
+        Toast.makeText(this, getString(R.string.contact_removed), Toast.LENGTH_SHORT).show()
     }
 
-    override fun onContextItemSelected(item: MenuItem): Boolean {
-        val position = (item.menuInfo as AdapterContextMenuInfo).position
-        return when(item.itemId) {
-            R.id.removeContactMi -> {
-                contactList.removeAt(position)
-                contactAdapter.notifyDataSetChanged()
-                Toast.makeText(this, getString(R.string.contact_removed), Toast.LENGTH_SHORT).show()
-                true
-            }
-            R.id.addContactMi -> {
-                carl.launch(Intent(this, ContactActivity::class.java).apply {
-                    putExtra(EXTRA_CONTACT, contactList[position])
-                })
-                true
-            }
-            else -> { false }
-        }
+    override fun onEditContactMenuItemClick(position: Int) {
+        carl.launch(Intent(this, ContactActivity::class.java).apply {
+            putExtra(EXTRA_CONTACT, contactList[position])
+        })
     }
 
     override fun onDestroy() {
         super.onDestroy()
+    }
+
+    override fun onContactClick(position: Int) {
+        Intent(this, ContactActivity::class.java).apply {
+            putExtra(EXTRA_CONTACT, contactList[position])
+            putExtra(EXTRA_VIEW_CONTACT, true)
+        }.also {
+            startActivity(it)
+        }
     }
 
     private fun fillContacts() {
